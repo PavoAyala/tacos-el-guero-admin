@@ -12,6 +12,10 @@ const IconInicio = ({ color }: { color: string }) => (
   <IconSymbol size={28} name="house.fill" color={color} />
 );
 
+const IconInventario = ({ color }: { color: string }) => (
+  <Ionicons size={26} name="cube-outline" color={color} />
+);
+
 const IconCorteCaja = ({ color }: { color: string }) => (
   <Ionicons size={26} name="calculator-outline" color={color} />
 );
@@ -35,6 +39,13 @@ export default function TabLayout() {
         options={{
           title: 'Inicio',
           tabBarIcon: IconInicio,
+        }}
+      />
+      <Tabs.Screen
+        name="inventario"
+        options={{
+          title: 'Inventario',
+          tabBarIcon: IconInventario,
         }}
       />
       <Tabs.Screen
