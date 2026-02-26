@@ -23,7 +23,7 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'YOUR_SUPAB
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         storage: Platform.OS === 'web'
-            ? (typeof window !== 'undefined' ? localStorage : { getItem: () => null, setItem: () => null, removeItem: () => null })
+            ? (typeof window !== 'undefined' ? localStorage : { getItem: () => null, setItem: () => undefined, removeItem: () => undefined })
             : ExpoSecureStoreAdapter,
         autoRefreshToken: true,
         persistSession: true,

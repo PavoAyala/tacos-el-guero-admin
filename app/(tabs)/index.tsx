@@ -109,7 +109,7 @@ export default function DashboardScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.actionsRow}>
           <QuickAction title="Nueva Venta" icon="add-circle-outline" onPress={() => console.log('Nueva Venta')} />
           <QuickAction title="Inventario" icon="list-outline" onPress={() => console.log('Inventario')} />
-          <QuickAction title="Corte de Caja" icon="calculator-outline" onPress={() => console.log('Corte')} />
+          <QuickAction title="Corte de Caja" icon="calculator-outline" onPress={() => router.push('/(tabs)/corte-caja')} />
           <QuickAction title="Personal" icon="people-circle-outline" onPress={() => console.log('Personal')} />
         </ScrollView>
 
