@@ -1,11 +1,12 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { AlertaInventario, marcarAlertaAtendida, obtenerAlertasActivas } from '@/lib/inventario';
 import { supabase } from '@/lib/supabase';
 
 // Componente para tarjetas de estadísticas
@@ -23,19 +24,42 @@ const StatCard = ({ title, value, icon, color }: { title: string, value: string,
   </ThemedView>
 );
 
-// Componente para elementos de lista de alertas
-const AlertItem = ({ message, type }: { message: string, type: 'warning' | 'info' | 'critical' }) => {
-  const colors = {
-    warning: '#f59e0b',
-    info: '#3b82f6',
-    critical: '#ef4444',
+// Componente para elementos de lista de alertas de inventario
+const AlertItem = ({
+  alerta,
+  onAtendida,
+}: {
+  alerta: AlertaInventario;
+  onAtendida: (id: string) => void;
+}) => {
+  const ing = alerta.ingredientes;
+  const [marcando, setMarcando] = useState(false);
+
+  const handleAtendida = async () => {
+    setMarcando(true);
+    try {
+      await marcarAlertaAtendida(alerta.id);
+      onAtendida(alerta.id);
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setMarcando(false);
+    }
   };
 
   return (
     <ThemedView style={styles.alertItem}>
-      <Ionicons name="alert-circle" size={20} color={colors[type]} style={{ marginRight: 10 }} />
-      <ThemedText style={{ flex: 1 }}>{message}</ThemedText>
-      <Ionicons name="chevron-forward" size={16} color="#ccc" />
+      <Ionicons name="alert-circle" size={20} color="#ef4444" style={{ marginRight: 10 }} />
+      <ThemedText style={{ flex: 1 }}>
+        Bajo stock: {ing?.nombre ?? '—'} ({ing?.cantidad_actual} {ing?.unidad} · mín. {ing?.stock_minimo} {ing?.unidad})
+      </ThemedText>
+      <TouchableOpacity
+        onPress={handleAtendida}
+        disabled={marcando}
+        style={styles.atendidaBtn}
+      >
+        <Ionicons name={marcando ? 'hourglass-outline' : 'checkmark-circle-outline'} size={20} color="#10b981" />
+      </TouchableOpacity>
     </ThemedView>
   );
 };
@@ -54,19 +78,35 @@ const QuickAction = ({ title, icon, onPress }: { title: string, icon: keyof type
 export default function DashboardScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [alertas, setAlertas] = useState<AlertaInventario[]>([]);
+
+  const cargarAlertas = useCallback(async () => {
+    try {
+      const data = await obtenerAlertasActivas();
+      setAlertas(data);
+    } catch {
+      // silencioso en dashboard
+    }
+  }, []);
+
+  useEffect(() => {
+    cargarAlertas();
+  }, [cargarAlertas]);
 
   // Simulación de recarga de datos
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
-  }, []);
+    cargarAlertas().finally(() => setRefreshing(false));
+  }, [cargarAlertas]);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) Alert.alert('Error', error.message);
     // El listener en _layout.tsx manejará la redirección
+  };
+
+  const handleAlertaAtendida = (id: string) => {
+    setAlertas((prev) => prev.filter((a) => a.id !== id));
   };
 
   return (
@@ -93,22 +133,34 @@ export default function DashboardScreen() {
           <StatCard title="Ventas Totales" value="$12,450" icon="cash-outline" color="#10b981" />
           <StatCard title="Pedidos Activos" value="8" icon="restaurant-outline" color="#f59e0b" />
           <StatCard title="Clientes" value="142" icon="people-outline" color="#3b82f6" />
-          <StatCard title="Inventario Bajo" value="3 items" icon="alert-outline" color="#ef4444" />
+          <StatCard
+            title="Inventario Bajo"
+            value={alertas.length > 0 ? `${alertas.length} items` : '✓ OK'}
+            icon="alert-outline"
+            color={alertas.length > 0 ? '#ef4444' : '#10b981'}
+          />
         </View>
 
         {/* Sección de Alertas / Pendientes */}
         <ThemedText type="subtitle" style={styles.sectionTitle}>Atención Requerida</ThemedText>
         <View style={styles.alertsContainer}>
-          <AlertItem message="Inventario bajo: Cilantro (2kg restantes)" type="critical" />
-          <AlertItem message="Pago a proveedor de refrescos pendiente" type="warning" />
-          <AlertItem message="3 reservas nuevas para el fin de semana" type="info" />
+          {alertas.length === 0 ? (
+            <ThemedView style={[styles.alertItem, { justifyContent: 'center' }]}>
+              <Ionicons name="checkmark-circle" size={20} color="#10b981" style={{ marginRight: 8 }} />
+              <ThemedText style={{ color: '#10b981' }}>Sin alertas de inventario 🎉</ThemedText>
+            </ThemedView>
+          ) : (
+            alertas.map((a) => (
+              <AlertItem key={a.id} alerta={a} onAtendida={handleAlertaAtendida} />
+            ))
+          )}
         </View>
 
         {/* Acciones Rápidas */}
         <ThemedText type="subtitle" style={styles.sectionTitle}>Acciones Rápidas</ThemedText>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.actionsRow}>
           <QuickAction title="Nueva Venta" icon="add-circle-outline" onPress={() => console.log('Nueva Venta')} />
-          <QuickAction title="Inventario" icon="list-outline" onPress={() => console.log('Inventario')} />
+          <QuickAction title="Inventario" icon="cube-outline" onPress={() => router.push('/(tabs)/inventario')} />
           <QuickAction title="Corte de Caja" icon="calculator-outline" onPress={() => router.push('/(tabs)/corte-caja')} />
           <QuickAction title="Personal" icon="people-circle-outline" onPress={() => console.log('Personal')} />
         </ScrollView>
@@ -203,6 +255,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
     backgroundColor: 'transparent',
+  },
+  atendidaBtn: {
+    padding: 4,
+    marginLeft: 8,
   },
   actionsRow: {
     paddingLeft: 20,
