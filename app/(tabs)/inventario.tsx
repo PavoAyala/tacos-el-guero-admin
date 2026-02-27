@@ -17,6 +17,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import {
     CATEGORIAS,
     Ingrediente,
@@ -70,12 +71,12 @@ const IngredienteRow = ({
                         {ing.cantidad_actual} {ing.unidad}
                     </ThemedText>
                 </View>
-                <ThemedText style={styles.rowCategoria}>{ing.categoria}</ThemedText>
+                <ThemedText style={styles.rowCategoria} darkColor="#9ba1a6">{ing.categoria}</ThemedText>
                 {/* Barra de progreso */}
                 <View style={styles.barraFondo}>
                     <View style={[styles.barraRelleno, { width: `${porcentaje}%`, backgroundColor: color }]} />
                 </View>
-                <ThemedText style={styles.rowMinimo}>
+                <ThemedText style={styles.rowMinimo} darkColor="#9ba1a6">
                     Mínimo: {ing.stock_minimo} {ing.unidad}
                 </ThemedText>
             </View>
@@ -132,6 +133,11 @@ const FormModal = ({
     const [guardando, setGuardando] = useState(false);
     const esEdicion = !!ingrediente;
 
+    const inputBg = useThemeColor({}, 'inputBackground');
+    const inputBorder = useThemeColor({}, 'inputBorder');
+    const textColor = useThemeColor({}, 'text');
+    const cardBg = useThemeColor({}, 'card');
+
     useEffect(() => {
         if (ingrediente) {
             setForm({
@@ -174,14 +180,16 @@ const FormModal = ({
             {
                 text: 'Eliminar',
                 style: 'destructive',
-                onPress: async () => {
-                    try {
-                        await eliminarIngrediente(ingrediente!.id);
-                        onSave();
-                        onClose();
-                    } catch (e: any) {
-                        Alert.alert('Error', e.message);
-                    }
+                onPress: () => {
+                    (async () => {
+                        try {
+                            await eliminarIngrediente(ingrediente!.id);
+                            onSave();
+                            onClose();
+                        } catch (e: any) {
+                            Alert.alert('Error', e.message);
+                        }
+                    })();
                 },
             },
         ]);
@@ -190,7 +198,7 @@ const FormModal = ({
     return (
         <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
             <Pressable style={styles.overlay} onPress={onClose} />
-            <View style={styles.sheet}>
+            <View style={[styles.sheet, { backgroundColor: cardBg }]}>
                 <View style={styles.sheetHandle} />
                 <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                     {/* Titulo */}
@@ -208,7 +216,7 @@ const FormModal = ({
                     {/* Nombre */}
                     <ThemedText style={styles.label}>Nombre *</ThemedText>
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
                         value={form.nombre}
                         onChangeText={(v) => setForm((f) => ({ ...f, nombre: v }))}
                         placeholder="ej. Cilantro"
@@ -220,7 +228,7 @@ const FormModal = ({
                         <View style={{ flex: 1 }}>
                             <ThemedText style={styles.label}>Cantidad actual *</ThemedText>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
                                 value={String(form.cantidad_actual)}
                                 onChangeText={(v) =>
                                     setForm((f) => ({ ...f, cantidad_actual: Number.parseFloat(v) || 0 }))
@@ -232,7 +240,7 @@ const FormModal = ({
                         <View style={{ flex: 1 }}>
                             <ThemedText style={styles.label}>Stock mínimo *</ThemedText>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
                                 value={String(form.stock_minimo)}
                                 onChangeText={(v) =>
                                     setForm((f) => ({ ...f, stock_minimo: Number.parseFloat(v) || 0 }))
@@ -272,7 +280,7 @@ const FormModal = ({
                     {/* Notas */}
                     <ThemedText style={styles.label}>Notas (opcional)</ThemedText>
                     <TextInput
-                        style={[styles.input, { height: 72, textAlignVertical: 'top' }]}
+                        style={[styles.input, { height: 72, textAlignVertical: 'top', backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
                         value={form.notas ?? ''}
                         onChangeText={(v) => setForm((f) => ({ ...f, notas: v }))}
                         placeholder="Proveedor, marca, observaciones..."
@@ -387,7 +395,7 @@ export default function InventarioScreen() {
                 </TouchableOpacity>
                 <View>
                     <ThemedText type="title">Inventario</ThemedText>
-                    <ThemedText style={styles.subtitle}>Ingredientes de cocina</ThemedText>
+                    <ThemedText style={styles.subtitle} darkColor="#9ba1a6">Ingredientes de cocina</ThemedText>
                 </View>
                 <TouchableOpacity onPress={abrirNuevo} style={styles.addBtn}>
                     <Ionicons name="add" size={26} color="#fff" />
@@ -480,7 +488,6 @@ const styles = StyleSheet.create({
     },
     backBtn: {
         padding: 6,
-        backgroundColor: '#f3f4f6',
         borderRadius: 8,
     },
     subtitle: { fontSize: 12, color: '#888', marginTop: 2 },
@@ -510,7 +517,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: '#f3f4f6',
         gap: 6,
     },
     filtroBtnActive: { backgroundColor: '#841584' },
@@ -580,23 +586,18 @@ const styles = StyleSheet.create({
     sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     label: { fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
     input: {
-        backgroundColor: '#f3f4f6',
         borderRadius: 10,
         padding: 12,
         fontSize: 15,
-        color: '#111',
         marginBottom: 16,
         borderWidth: 1,
-        borderColor: '#e5e7eb',
     },
     chipsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
     chip: {
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
-        backgroundColor: '#f3f4f6',
         borderWidth: 1,
-        borderColor: '#e5e7eb',
         marginRight: 6,
         marginBottom: 4,
     },

@@ -20,10 +20,6 @@ const IconCorteCaja = ({ color }: { color: string }) => (
   <Ionicons size={26} name="calculator-outline" color={color} />
 );
 
-const IconExplorar = ({ color }: { color: string }) => (
-  <IconSymbol size={28} name="paperplane.fill" color={color} />
-);
-
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
@@ -53,13 +49,6 @@ export default function TabLayout() {
         options={{
           title: 'Corte de Caja',
           tabBarIcon: IconCorteCaja,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explorar',
-          tabBarIcon: IconExplorar,
         }}
       />
     </Tabs>

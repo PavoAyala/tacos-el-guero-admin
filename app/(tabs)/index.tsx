@@ -1,28 +1,150 @@
-
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, RefreshControl, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AlertaInventario, marcarAlertaAtendida, obtenerAlertasActivas } from '@/lib/inventario';
+import { crearOrderManual, OrderType } from '@/lib/orders';
 import { supabase } from '@/lib/supabase';
 
+import { useThemeColor } from '@/hooks/use-theme-color';
+
+// ─── Modal de Nueva Venta ──────────────────────────────────────────────────────
+
+const OrderFormModal = ({
+  visible,
+  onClose,
+  onSave,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onSave: () => void;
+}) => {
+  const [monto, setMonto] = useState('');
+  const [tipo, setTipo] = useState<OrderType>('dine-in');
+  const [guardando, setGuardando] = useState(false);
+
+  const inputBg = useThemeColor({}, 'inputBackground');
+  const inputBorder = useThemeColor({}, 'inputBorder');
+  const textColor = useThemeColor({}, 'text');
+  const cardBg = useThemeColor({}, 'card');
+
+  useEffect(() => {
+    if (visible) {
+      setMonto('');
+      setTipo('dine-in');
+    }
+  }, [visible]);
+
+  const handleGuardar = async () => {
+    const total = parseFloat(monto.replace(',', '.'));
+    if (isNaN(total) || total <= 0) {
+      Alert.alert('Error', 'Ingresa un monto válido');
+      return;
+    }
+
+    setGuardando(true);
+    try {
+      await crearOrderManual({
+        total_amount: total,
+        order_type: tipo,
+      });
+      onSave();
+      onClose();
+    } catch (e: any) {
+      Alert.alert('Error', e.message ?? 'No se pudo registrar la venta');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Pressable style={dashboardStyles.overlay} onPress={onClose} />
+      <View style={[dashboardStyles.sheet, { backgroundColor: cardBg }]}>
+        <View style={dashboardStyles.sheetHandle} />
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <ThemedText type="subtitle" style={{ marginBottom: 20 }}>Nueva Venta (Efectivo)</ThemedText>
+
+          <ThemedText style={dashboardStyles.label}>Monto Total *</ThemedText>
+          <TextInput
+            style={[dashboardStyles.input, { backgroundColor: inputBg, borderColor: inputBorder, color: textColor }]}
+            value={monto}
+            onChangeText={setMonto}
+            placeholder="0.00"
+            placeholderTextColor="#aaa"
+            keyboardType="decimal-pad"
+          />
+
+          <ThemedText style={dashboardStyles.label}>Tipo de Pedido</ThemedText>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+            <TouchableOpacity
+              style={[dashboardStyles.chip, tipo === 'dine-in' && dashboardStyles.chipSelected]}
+              onPress={() => setTipo('dine-in')}
+            >
+              <ThemedText style={[dashboardStyles.chipText, tipo === 'dine-in' && dashboardStyles.chipTextSelected]}>
+                Para comer
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[dashboardStyles.chip, tipo === 'takeout' && dashboardStyles.chipSelected]}
+              onPress={() => setTipo('takeout')}
+            >
+              <ThemedText style={[dashboardStyles.chipText, tipo === 'takeout' && dashboardStyles.chipTextSelected]}>
+                Para llevar
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[dashboardStyles.btnGuardar, guardando && { opacity: 0.6 }]}
+            onPress={handleGuardar}
+            disabled={guardando}
+          >
+            {guardando ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <ThemedText style={dashboardStyles.btnGuardarText}>Registrar Venta</ThemedText>
+            )}
+          </TouchableOpacity>
+          <View style={{ height: 30 }} />
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+};
+
 // Componente para tarjetas de estadísticas
-const StatCard = ({ title, value, icon, color }: { title: string, value: string, icon: keyof typeof Ionicons.glyphMap, color: string }) => (
-  <ThemedView style={[styles.card, { borderLeftColor: color, borderLeftWidth: 4 }]}>
-    <View style={styles.cardContent}>
-      <View>
-        <ThemedText type="defaultSemiBold" style={{ color: '#666', fontSize: 12 }}>{title.toUpperCase()}</ThemedText>
-        <ThemedText type="title" style={{ fontSize: 24, marginTop: 4 }}>{value}</ThemedText>
+const StatCard = ({ title, value, icon, color }: { title: string, value: string, icon: keyof typeof Ionicons.glyphMap, color: string }) => {
+  const subtextColor = useThemeColor({}, 'subtext');
+
+  return (
+    <ThemedView lightColor="#fff" darkColor="#1e2123" style={[dashboardStyles.card, { borderLeftColor: color, borderLeftWidth: 4 }]}>
+      <View style={dashboardStyles.cardContent}>
+        <View>
+          <ThemedText type="defaultSemiBold" style={{ color: subtextColor, fontSize: 12 }}>{title.toUpperCase()}</ThemedText>
+          <ThemedText type="title" style={{ fontSize: 24, marginTop: 4 }}>{value}</ThemedText>
+        </View>
+        <View style={[dashboardStyles.iconContainer, { backgroundColor: color + '20' }]}>
+          <Ionicons name={icon} size={24} color={color} />
+        </View>
       </View>
-      <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
-        <Ionicons name={icon} size={24} color={color} />
-      </View>
-    </View>
-  </ThemedView>
-);
+    </ThemedView>
+  );
+};
 
 // Componente para elementos de lista de alertas de inventario
 const AlertItem = ({
@@ -48,7 +170,7 @@ const AlertItem = ({
   };
 
   return (
-    <ThemedView style={styles.alertItem}>
+    <ThemedView style={dashboardStyles.alertItem}>
       <Ionicons name="alert-circle" size={20} color="#ef4444" style={{ marginRight: 10 }} />
       <ThemedText style={{ flex: 1 }}>
         Bajo stock: {ing?.nombre ?? '—'} ({ing?.cantidad_actual} {ing?.unidad} · mín. {ing?.stock_minimo} {ing?.unidad})
@@ -56,7 +178,7 @@ const AlertItem = ({
       <TouchableOpacity
         onPress={handleAtendida}
         disabled={marcando}
-        style={styles.atendidaBtn}
+        style={dashboardStyles.atendidaBtn}
       >
         <Ionicons name={marcando ? 'hourglass-outline' : 'checkmark-circle-outline'} size={20} color="#10b981" />
       </TouchableOpacity>
@@ -66,11 +188,11 @@ const AlertItem = ({
 
 // Componente para botones de acción rápida
 const QuickAction = ({ title, icon, onPress }: { title: string, icon: keyof typeof Ionicons.glyphMap, onPress: () => void }) => (
-  <TouchableOpacity style={styles.actionButton} onPress={onPress}>
-    <View style={styles.actionIconCircle}>
+  <TouchableOpacity style={dashboardStyles.actionButton} onPress={onPress}>
+    <View style={dashboardStyles.actionIconCircle}>
       <Ionicons name={icon} size={24} color="#fff" />
     </View>
-    <ThemedText style={styles.actionText}>{title}</ThemedText>
+    <ThemedText style={dashboardStyles.actionText}>{title}</ThemedText>
   </TouchableOpacity>
 );
 
@@ -79,6 +201,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [alertas, setAlertas] = useState<AlertaInventario[]>([]);
+  const [orderModalVisible, setOrderModalVisible] = useState(false);
 
   const cargarAlertas = useCallback(async () => {
     try {
@@ -109,27 +232,37 @@ export default function DashboardScreen() {
     setAlertas((prev) => prev.filter((a) => a.id !== id));
   };
 
+  const handleNewOrderSaved = () => {
+    Alert.alert('Éxito', 'Venta registrada correctamente');
+    onRefresh(); // Recargar estadísticas y alertas si aplica
+  };
+
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={dashboardStyles.container}>
+      <OrderFormModal
+        visible={orderModalVisible}
+        onClose={() => setOrderModalVisible(false)}
+        onSave={handleNewOrderSaved}
+      />
       {/* Header */}
-      <View style={styles.header}>
+      <View style={dashboardStyles.header}>
         <View>
-          <ThemedText type="subtitle" style={{ color: '#666' }}>Hola, Admin</ThemedText>
+          <ThemedText type="subtitle" darkColor="#9ba1a6" style={{ color: '#666' }}>Hola, Admin</ThemedText>
           <ThemedText type="title">Tacos El Guero</ThemedText>
         </View>
-        <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
+        <TouchableOpacity onPress={handleSignOut} style={dashboardStyles.signOutButton}>
           <Ionicons name="log-out-outline" size={24} color="#ef4444" />
         </TouchableOpacity>
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={dashboardStyles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
 
         {/* Sección de Resumen del Día */}
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Resumen del Día</ThemedText>
-        <View style={styles.statsGrid}>
+        <ThemedText type="subtitle" style={dashboardStyles.sectionTitle}>Resumen del Día</ThemedText>
+        <View style={dashboardStyles.statsGrid}>
           <StatCard title="Ventas Totales" value="$12,450" icon="cash-outline" color="#10b981" />
           <StatCard title="Pedidos Activos" value="8" icon="restaurant-outline" color="#f59e0b" />
           <StatCard title="Clientes" value="142" icon="people-outline" color="#3b82f6" />
@@ -142,10 +275,10 @@ export default function DashboardScreen() {
         </View>
 
         {/* Sección de Alertas / Pendientes */}
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Atención Requerida</ThemedText>
-        <View style={styles.alertsContainer}>
+        <ThemedText type="subtitle" style={dashboardStyles.sectionTitle}>Atención Requerida</ThemedText>
+        <View style={dashboardStyles.alertsContainer}>
           {alertas.length === 0 ? (
-            <ThemedView style={[styles.alertItem, { justifyContent: 'center' }]}>
+            <ThemedView style={[dashboardStyles.alertItem, { justifyContent: 'center' }]}>
               <Ionicons name="checkmark-circle" size={20} color="#10b981" style={{ marginRight: 8 }} />
               <ThemedText style={{ color: '#10b981' }}>Sin alertas de inventario 🎉</ThemedText>
             </ThemedView>
@@ -157,33 +290,33 @@ export default function DashboardScreen() {
         </View>
 
         {/* Acciones Rápidas */}
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Acciones Rápidas</ThemedText>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.actionsRow}>
-          <QuickAction title="Nueva Venta" icon="add-circle-outline" onPress={() => console.log('Nueva Venta')} />
+        <ThemedText type="subtitle" style={dashboardStyles.sectionTitle}>Acciones Rápidas</ThemedText>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={dashboardStyles.actionsRow}>
+          <QuickAction title="Nueva Venta" icon="add-circle-outline" onPress={() => setOrderModalVisible(true)} />
           <QuickAction title="Inventario" icon="cube-outline" onPress={() => router.push('/(tabs)/inventario')} />
           <QuickAction title="Corte de Caja" icon="calculator-outline" onPress={() => router.push('/(tabs)/corte-caja')} />
           <QuickAction title="Personal" icon="people-circle-outline" onPress={() => console.log('Personal')} />
         </ScrollView>
 
         {/* Gráfico Placeholder (Imagen o Vista simple) */}
-        <ThemedText type="subtitle" style={styles.sectionTitle}>Tendencia Semanal</ThemedText>
-        <View style={styles.chartPlaceholder}>
-          <View style={[styles.bar, { height: '40%' }]} />
-          <View style={[styles.bar, { height: '60%' }]} />
-          <View style={[styles.bar, { height: '50%' }]} />
-          <View style={[styles.bar, { height: '80%' }]} />
-          <View style={[styles.bar, { height: '70%' }]} />
-          <View style={[styles.bar, { height: '90%' }]} />
-          <View style={[styles.bar, { height: '65%' }]} />
+        <ThemedText type="subtitle" style={dashboardStyles.sectionTitle}>Tendencia Semanal</ThemedText>
+        <View style={dashboardStyles.chartPlaceholder}>
+          <View style={[dashboardStyles.bar, { height: '40%' }]} />
+          <View style={[dashboardStyles.bar, { height: '60%' }]} />
+          <View style={[dashboardStyles.bar, { height: '50%' }]} />
+          <View style={[dashboardStyles.bar, { height: '80%' }]} />
+          <View style={[dashboardStyles.bar, { height: '70%' }]} />
+          <View style={[dashboardStyles.bar, { height: '90%' }]} />
+          <View style={[dashboardStyles.bar, { height: '65%' }]} />
         </View>
-        <View style={styles.daysRow}>
-          <ThemedText style={styles.dayText}>L</ThemedText>
-          <ThemedText style={styles.dayText}>M</ThemedText>
-          <ThemedText style={styles.dayText}>M</ThemedText>
-          <ThemedText style={styles.dayText}>J</ThemedText>
-          <ThemedText style={styles.dayText}>V</ThemedText>
-          <ThemedText style={styles.dayText}>S</ThemedText>
-          <ThemedText style={styles.dayText}>D</ThemedText>
+        <View style={dashboardStyles.daysRow}>
+          <ThemedText style={dashboardStyles.dayText}>L</ThemedText>
+          <ThemedText style={dashboardStyles.dayText}>M</ThemedText>
+          <ThemedText style={dashboardStyles.dayText}>M</ThemedText>
+          <ThemedText style={dashboardStyles.dayText}>J</ThemedText>
+          <ThemedText style={dashboardStyles.dayText}>V</ThemedText>
+          <ThemedText style={dashboardStyles.dayText}>S</ThemedText>
+          <ThemedText style={dashboardStyles.dayText}>D</ThemedText>
         </View>
 
       </ScrollView>
@@ -191,7 +324,7 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const dashboardStyles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 50, // Ajuste para status bar
@@ -224,7 +357,6 @@ const styles = StyleSheet.create({
   card: {
     width: '45%', // Aproximadamente la mitad menos márgenes
     margin: '2.5%',
-    backgroundColor: '#fff', // O un color temático
     borderRadius: 12,
     padding: 15,
     elevation: 2,
@@ -244,7 +376,6 @@ const styles = StyleSheet.create({
   },
   alertsContainer: {
     marginHorizontal: 20,
-    backgroundColor: '#f9fafb', // Fondo suave
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -253,7 +384,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
     backgroundColor: 'transparent',
   },
   atendidaBtn: {
@@ -305,6 +435,77 @@ const styles = StyleSheet.create({
   },
   dayText: {
     fontSize: 12,
-    color: '#666',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  sheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+    maxHeight: '80%',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#ddd',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#888',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  input: {
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  chip: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  chipSelected: {
+    backgroundColor: '#841584',
+    borderColor: '#841584',
+  },
+  chipText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  chipTextSelected: {
+    color: '#fff',
+  },
+  btnGuardar: {
+    backgroundColor: '#841584',
+    borderRadius: 16,
+    padding: 18,
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: '#841584',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  btnGuardarText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

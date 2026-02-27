@@ -15,6 +15,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useThemeColor } from '@/hooks/use-theme-color';
 import {
     TotalesPorMetodo,
     calcularTotalesDelDia,
@@ -38,7 +39,7 @@ interface MetodoPagoCardProps {
 }
 
 const MetodoPagoCard = ({ label, icon, color, monto }: MetodoPagoCardProps) => (
-    <View style={[styles.metodoPagoCard, { borderLeftColor: color }]}>
+    <ThemedView lightColor="#fff" darkColor="#1e2123" style={[styles.metodoPagoCard, { borderLeftColor: color }]}>
         <View style={[styles.metodoPagoIcon, { backgroundColor: color + '20' }]}>
             <Ionicons name={icon} size={20} color={color} />
         </View>
@@ -48,7 +49,7 @@ const MetodoPagoCard = ({ label, icon, color, monto }: MetodoPagoCardProps) => (
                 {formatMXN(monto)}
             </ThemedText>
         </View>
-    </View>
+    </ThemedView>
 );
 
 interface DiferenciaRowProps {
@@ -59,9 +60,10 @@ interface DiferenciaRowProps {
 
 const DiferenciaRow = ({ label, monto, highlight }: DiferenciaRowProps) => {
     const esFuga = monto < 0;
+    const defaultTextColor = useThemeColor({}, 'text');
     let color: string;
     if (!highlight) {
-        color = '#374151';
+        color = defaultTextColor;
     } else if (esFuga) {
         color = '#ef4444';
     } else {
@@ -95,6 +97,11 @@ export default function CorteCajaScreen() {
     });
     const [efectivoContado, setEfectivoContado] = useState('');
     const [notas, setNotas] = useState('');
+
+    const textColor = useThemeColor({}, 'text');
+    const inputBg = useThemeColor({}, 'inputBackground');
+    const borderCol = useThemeColor({}, 'border');
+    const cardBg = useThemeColor({}, 'card');
 
     // Cargar totales al montar
     useEffect(() => {
@@ -169,7 +176,7 @@ export default function CorteCajaScreen() {
                     <ThemedText type="title">Corte de Caja</ThemedText>
                 </View>
                 <TouchableOpacity
-                    style={styles.historialBtn}
+                    style={[styles.historialBtn, { backgroundColor: useThemeColor({ light: '#f3e8ff', dark: '#2a2d2f' }, 'background') }]}
                     onPress={() => router.push('/historial-cortes')}
                 >
                     <Ionicons name="time-outline" size={20} color="#841584" />
@@ -220,10 +227,10 @@ export default function CorteCajaScreen() {
                     {/* ── EFECTIVO CONTADO ── */}
                     <ThemedText style={styles.sectionTitle}>Conteo Físico de Efectivo</ThemedText>
                     <View style={styles.inputSection}>
-                        <View style={styles.inputWrapper}>
+                        <View style={[styles.inputWrapper, { backgroundColor: inputBg }]}>
                             <ThemedText style={styles.inputPrefix}>$</ThemedText>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, { color: textColor }]}
                                 placeholder="0.00"
                                 placeholderTextColor="#9ca3af"
                                 keyboardType="decimal-pad"
@@ -239,7 +246,7 @@ export default function CorteCajaScreen() {
 
                     {/* ── RESUMEN DE DIFERENCIA ── */}
                     <ThemedText style={styles.sectionTitle}>Resumen del Corte</ThemedText>
-                    <View style={styles.resumenCard}>
+                    <View style={[styles.resumenCard, { backgroundColor: cardBg }]}>
                         <DiferenciaRow label="Efectivo en sistema" monto={totales.efectivo} />
                         <DiferenciaRow label="Efectivo contado" monto={efectivoContadoNum} />
                         <View style={styles.separador} />
@@ -261,7 +268,7 @@ export default function CorteCajaScreen() {
                     {/* ── NOTAS ── */}
                     <ThemedText style={styles.sectionTitle}>Notas (opcional)</ThemedText>
                     <TextInput
-                        style={styles.notasInput}
+                        style={[styles.notasInput, { backgroundColor: inputBg, color: textColor, borderColor: borderCol, borderWidth: 1 }]}
                         placeholder="Observaciones del corte..."
                         placeholderTextColor="#9ca3af"
                         multiline
@@ -317,7 +324,6 @@ const styles = StyleSheet.create({
     },
     historialBtn: {
         padding: 10,
-        backgroundColor: '#f3e8ff',
         borderRadius: 10,
     },
     scroll: {
@@ -341,7 +347,6 @@ const styles = StyleSheet.create({
     metodoPagoCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
         borderRadius: 12,
         padding: 14,
         gap: 12,
@@ -399,7 +404,6 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
         borderRadius: 12,
         borderWidth: 2,
         borderColor: '#841584',
@@ -420,7 +424,6 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 28,
         fontWeight: '700',
-        color: '#111827',
         paddingVertical: 14,
     },
     inputHint: {
@@ -431,7 +434,6 @@ const styles = StyleSheet.create({
 
     // Resumen / diferencia
     resumenCard: {
-        backgroundColor: '#fff',
         borderRadius: 12,
         padding: 16,
         elevation: 2,
@@ -476,13 +478,9 @@ const styles = StyleSheet.create({
 
     // Notas
     notasInput: {
-        backgroundColor: '#fff',
         borderRadius: 12,
         padding: 14,
         fontSize: 14,
-        color: '#374151',
-        borderWidth: 1,
-        borderColor: '#e5e7eb',
         textAlignVertical: 'top',
         minHeight: 80,
         elevation: 1,
