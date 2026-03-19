@@ -35,9 +35,10 @@ export interface NuevoCorte {
  * usando la tabla `payments` de Supabase.
  */
 export async function calcularTotalesDelDia(fecha: string): Promise<TotalesPorMetodo> {
-    // Definimos el rango del día completo en UTC
-    const inicio = `${fecha}T00:00:00.000Z`;
-    const fin = `${fecha}T23:59:59.999Z`;
+    // La fecha viene como YYYY-MM-DD (local)
+    // Definimos el rango del día completo en la zona horaria local
+    const inicio = new Date(`${fecha}T00:00:00`).toISOString();
+    const fin = new Date(`${fecha}T23:59:59.999`).toISOString();
 
     const { data, error } = await supabase
         .from('payments')

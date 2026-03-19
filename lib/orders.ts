@@ -2,13 +2,26 @@ import { supabase } from './supabase';
 
 export type OrderType = 'dine-in' | 'takeout';
 
+export interface OrderItem {
+    id: number;
+    order_id: number;
+    product_id: number;
+    quantity: number;
+    unit_price: number;
+    subtotal: number;
+    products?: {
+        name: string;
+    };
+}
+
 export interface Order {
     id: number;
     user_id: string;
     total_amount: number;
-    order_type: OrderType;
-    status: string;
+    order_type: 'dine-in' | 'takeout';
+    status: 'pending' | 'completed' | 'cancelled';
     created_at: string;
+    order_items?: OrderItem[];
 }
 
 export interface NewOrder {
@@ -40,7 +53,6 @@ export async function crearOrderManual(datos: NewOrder): Promise<Order> {
     if (orderError) throw orderError;
 
     // 2. Crear el pago asociado (para que aparezca en el corte de caja)
-    // Asumimos que la tabla 'payments' existe y tiene esta estructura basada en lib/corte-caja.ts
     const { error: paymentError } = await supabase
         .from('payments')
         .insert({
@@ -48,14 +60,49 @@ export async function crearOrderManual(datos: NewOrder): Promise<Order> {
             amount: datos.total_amount,
             payment_method: 'efectivo',
             status: 'completed',
-            // created_at se genera automáticamente por defecto en la mayoría de esquemas de Supabase
         });
 
     if (paymentError) {
         console.error('Error al crear el pago sincronizado:', paymentError);
-        // No lanzamos error aquí para no bloquear la creación de la orden, 
-        // pero es ideal que el admin sepa que hubo un problema de sincronización.
+        // Opcional: Podrías alertar al usuario, pero como es manual se asume completado
     }
 
     return order as Order;
+}
+
+/**
+ * Obtiene los pedidos pendientes (status = 'pending').
+ */
+export async function obtenerPedidosPendientes(): Promise<any[]> {
+    const { data, error } = await supabase
+        .from('orders')
+        .select(`
+            *,
+            order_items (
+                id,
+                quantity,
+                unit_price,
+                subtotal,
+                products (
+                    name
+                )
+            )
+        `)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return (data ?? []) as any[];
+}
+
+/**
+ * Marca un pedido como completado.
+ */
+export async function completarPedido(id: number): Promise<void> {
+    const { error } = await supabase
+        .from('orders')
+        .update({ status: 'completed' })
+        .eq('id', id);
+
+    if (error) throw error;
 }

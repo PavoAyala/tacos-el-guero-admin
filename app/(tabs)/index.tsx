@@ -21,6 +21,13 @@ import { crearOrderManual, OrderType } from '@/lib/orders';
 import { supabase } from '@/lib/supabase';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { calcularTotalesDelDia, TotalesPorMetodo } from '@/lib/corte-caja';
+import { obtenerPedidosPendientes, Order } from '@/lib/orders';
+
+const formatMXN = (n: number) =>
+  n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+
+const todayISO = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
 
 // ─── Modal de Nueva Venta ──────────────────────────────────────────────────────
 
@@ -50,8 +57,8 @@ const OrderFormModal = ({
   }, [visible]);
 
   const handleGuardar = async () => {
-    const total = parseFloat(monto.replace(',', '.'));
-    if (isNaN(total) || total <= 0) {
+    const total = Number.parseFloat(monto.replace(',', '.'));
+    if (Number.isNaN(total) || total <= 0) {
       Alert.alert('Error', 'Ingresa un monto válido');
       return;
     }
@@ -202,25 +209,38 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [alertas, setAlertas] = useState<AlertaInventario[]>([]);
   const [orderModalVisible, setOrderModalVisible] = useState(false);
+  const [ordenesPendientes, setOrdenesPendientes] = useState<Order[]>([]);
+  const [totalesHoy, setTotalesHoy] = useState<TotalesPorMetodo>({
+    efectivo: 0,
+    tarjeta: 0,
+    otro: 0,
+    total: 0,
+  });
 
-  const cargarAlertas = useCallback(async () => {
+  const cargarDatos = useCallback(async () => {
     try {
-      const data = await obtenerAlertasActivas();
-      setAlertas(data);
+      const [alertasData, totalesData, pedidosData] = await Promise.all([
+        obtenerAlertasActivas(),
+        calcularTotalesDelDia(todayISO()),
+        obtenerPedidosPendientes()
+      ]);
+      setAlertas(alertasData);
+      setTotalesHoy(totalesData);
+      setOrdenesPendientes(pedidosData);
     } catch {
       // silencioso en dashboard
     }
   }, []);
 
   useEffect(() => {
-    cargarAlertas();
-  }, [cargarAlertas]);
+    cargarDatos();
+  }, [cargarDatos]);
 
   // Simulación de recarga de datos
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    cargarAlertas().finally(() => setRefreshing(false));
-  }, [cargarAlertas]);
+    cargarDatos().finally(() => setRefreshing(false));
+  }, [cargarDatos]);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -263,8 +283,13 @@ export default function DashboardScreen() {
         {/* Sección de Resumen del Día */}
         <ThemedText type="subtitle" style={dashboardStyles.sectionTitle}>Resumen del Día</ThemedText>
         <View style={dashboardStyles.statsGrid}>
-          <StatCard title="Ventas Totales" value="$12,450" icon="cash-outline" color="#10b981" />
-          <StatCard title="Pedidos Activos" value="8" icon="restaurant-outline" color="#f59e0b" />
+          <StatCard
+            title="Ventas Totales"
+            value={formatMXN(totalesHoy.total)}
+            icon="cash-outline"
+            color="#10b981"
+          />
+          <StatCard title="Pedidos Activos" value={ordenesPendientes.length.toString()} icon="restaurant-outline" color="#f59e0b" />
           <StatCard title="Clientes" value="142" icon="people-outline" color="#3b82f6" />
           <StatCard
             title="Inventario Bajo"
@@ -293,9 +318,10 @@ export default function DashboardScreen() {
         <ThemedText type="subtitle" style={dashboardStyles.sectionTitle}>Acciones Rápidas</ThemedText>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={dashboardStyles.actionsRow}>
           <QuickAction title="Nueva Venta" icon="add-circle-outline" onPress={() => setOrderModalVisible(true)} />
+          <QuickAction title="Activos" icon="flash-outline" onPress={() => router.push('/(tabs)/activos')} />
           <QuickAction title="Inventario" icon="cube-outline" onPress={() => router.push('/(tabs)/inventario')} />
           <QuickAction title="Corte de Caja" icon="calculator-outline" onPress={() => router.push('/(tabs)/corte-caja')} />
-          <QuickAction title="Personal" icon="people-circle-outline" onPress={() => console.log('Personal')} />
+          <QuickAction title="Personal" icon="people-circle-outline" onPress={() => router.push('/(tabs)/personal')} />
         </ScrollView>
 
         {/* Gráfico Placeholder (Imagen o Vista simple) */}

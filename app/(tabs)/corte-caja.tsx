@@ -6,6 +6,7 @@ import {
     Alert,
     KeyboardAvoidingView,
     Platform,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     TextInput,
@@ -27,7 +28,7 @@ import {
 const formatMXN = (n: number) =>
     n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 
-const todayISO = () => new Date().toISOString().split('T')[0];
+const todayISO = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
 
 // ── Sub-componentes ───────────────────────────────────────────────────────────
 
@@ -89,6 +90,7 @@ export default function CorteCajaScreen() {
 
     const [cargando, setCargando] = useState(true);
     const [guardando, setGuardando] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
     const [totales, setTotales] = useState<TotalesPorMetodo>({
         efectivo: 0,
         tarjeta: 0,
@@ -103,20 +105,28 @@ export default function CorteCajaScreen() {
     const borderCol = useThemeColor({}, 'border');
     const cardBg = useThemeColor({}, 'card');
 
+    const cargarDatos = async () => {
+        try {
+            const data = await calcularTotalesDelDia(fecha);
+            setTotales(data);
+        } catch (e: unknown) {
+            Alert.alert('Error', 'No se pudieron cargar los totales del día.');
+            console.error(e);
+        } finally {
+            setCargando(false);
+            setRefreshing(false);
+        }
+    };
+
     // Cargar totales al montar
     useEffect(() => {
-        (async () => {
-            try {
-                const data = await calcularTotalesDelDia(fecha);
-                setTotales(data);
-            } catch (e: unknown) {
-                Alert.alert('Error', 'No se pudieron cargar los totales del día.');
-                console.error(e);
-            } finally {
-                setCargando(false);
-            }
-        })();
+        cargarDatos();
     }, [fecha]);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        cargarDatos();
+    };
 
     const efectivoContadoNum = Number.parseFloat(efectivoContado.replace(',', '.')) || 0;
     const diferencia = efectivoContadoNum - totales.efectivo;
@@ -175,19 +185,34 @@ export default function CorteCajaScreen() {
                     </ThemedText>
                     <ThemedText type="title">Corte de Caja</ThemedText>
                 </View>
-                <TouchableOpacity
-                    style={[styles.historialBtn, { backgroundColor: useThemeColor({ light: '#f3e8ff', dark: '#2a2d2f' }, 'background') }]}
-                    onPress={() => router.push('/historial-cortes')}
-                >
-                    <Ionicons name="time-outline" size={20} color="#841584" />
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity
+                        style={[styles.historialBtn, { backgroundColor: useThemeColor({ light: '#f0fdf4', dark: '#1a2e21' }, 'background') }]}
+                        onPress={onRefresh}
+                        disabled={refreshing || cargando}
+                    >
+                        <Ionicons name="refresh-outline" size={20} color="#10b981" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.historialBtn, { backgroundColor: useThemeColor({ light: '#f3e8ff', dark: '#2a2d2f' }, 'background') }]}
+                        onPress={() => router.push('/historial-cortes')}
+                    >
+                        <Ionicons name="time-outline" size={20} color="#841584" />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
             >
-                <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+                <ScrollView
+                    contentContainerStyle={styles.scroll}
+                    keyboardShouldPersistTaps="handled"
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#841584"]} tintColor="#841584" />
+                    }
+                >
 
                     {/* ── VENTAS POR MÉTODO ── */}
                     <ThemedText style={styles.sectionTitle}>Ventas del Sistema</ThemedText>
