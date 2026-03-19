@@ -59,6 +59,13 @@ export default function LoginScreen() {
                         <Button title="Iniciar Sesión" onPress={signInWithEmail} color="#841584" />
                     )}
                 </View>
+
+                <View style={styles.registerContainer}>
+                    <Text style={styles.registerText}>¿No tienes cuenta? </Text>
+                    <Text style={styles.registerLink} onPress={() => router.push('/register')}>
+                        Regístrate aquí
+                    </Text>
+                </View>
             </View>
         </View>
     );
@@ -116,5 +123,19 @@ const styles = StyleSheet.create({
     },
     buttonContainer: {
         marginTop: 10,
+    },
+    registerContainer: {
+        marginTop: 20,
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    registerText: {
+        fontSize: 16,
+        color: '#666',
+    },
+    registerLink: {
+        fontSize: 16,
+        color: '#841584',
+        fontWeight: 'bold',
     },
 });
