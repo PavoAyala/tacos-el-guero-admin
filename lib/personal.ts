@@ -3,9 +3,9 @@ import { supabase } from './supabase';
 export interface Profile {
     id: string;
     email?: string;
-    display_name: string | null;
+    name: string | null;
     avatar_url: string | null;
-    role: 'admin' | 'staff' | 'manager' | null;
+    role: 'cliente' | 'cocina' | 'cajero' | 'admin' | 'mesero' | 'dueño' | null;
     created_at: string;
 }
 
@@ -16,7 +16,7 @@ export async function obtenerPersonal(): Promise<Profile[]> {
     const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('display_name', { ascending: true });
+        .order('name', { ascending: true });
 
     if (error) {
         console.error('Error al obtener personal:', error);
@@ -24,7 +24,7 @@ export async function obtenerPersonal(): Promise<Profile[]> {
         const { data: userData, error: userError } = await supabase
             .from('users')
             .select('*')
-            .order('display_name', { ascending: true });
+            .order('name', { ascending: true });
 
         if (userError) throw userError;
         return (userData ?? []) as Profile[];

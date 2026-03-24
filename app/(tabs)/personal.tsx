@@ -26,18 +26,24 @@ const PersonnelCard = ({ person }: { person: Profile }) => {
     const getRoleLabel = (role: string | null) => {
         switch (role) {
             case 'admin': return 'Administrador';
-            case 'manager': return 'Gerente';
-            case 'staff': return 'Personal';
+            case 'dueño': return 'Dueño';
+            case 'cajero': return 'Cajero';
+            case 'cocina': return 'Cocina';
+            case 'mesero': return 'Mesero';
+            case 'cliente': return 'Cliente';
             default: return 'Usuario';
         }
     };
 
     const getRoleColor = (role: string | null) => {
         switch (role) {
-            case 'admin': return '#ef4444';
-            case 'manager': return '#3b82f6';
-            case 'staff': return '#10b981';
-            default: return '#6b7280';
+            case 'admin': return '#ef4444';     // red
+            case 'dueño': return '#7c3aed';     // purple
+            case 'cajero': return '#f59e0b';    // amber
+            case 'cocina': return '#10b981';    // emerald
+            case 'mesero': return '#3b82f6';    // blue
+            case 'cliente': return '#6b7280';   // gray
+            default: return '#9ca3af';
         }
     };
 
@@ -48,7 +54,7 @@ const PersonnelCard = ({ person }: { person: Profile }) => {
             </View>
             <View style={styles.info}>
                 <ThemedText type="defaultSemiBold" style={styles.name}>
-                    {person.display_name || 'Sin nombre'}
+                    {person.name || 'Sin nombre'}
                 </ThemedText>
                 <ThemedText style={[styles.role, { color: getRoleColor(person.role) }]}>
                     {getRoleLabel(person.role)}
@@ -100,7 +106,7 @@ export default function PersonalScreen() {
             setFilteredPersonal(
                 personal.filter(
                     (p) =>
-                        p.display_name?.toLowerCase().includes(lowerSearch) ||
+                        p.name?.toLowerCase().includes(lowerSearch) ||
                         p.email?.toLowerCase().includes(lowerSearch)
                 )
             );
