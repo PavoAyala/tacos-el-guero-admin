@@ -1,5 +1,3 @@
-create extension if not exists pgcrypto;
-
 create table if not exists public.fiscal_config (
     id uuid primary key default gen_random_uuid(),
     regimen_fiscal text not null,
@@ -57,6 +55,8 @@ create index if not exists idx_gastos_fecha on public.gastos(fecha);
 create index if not exists idx_gastos_created_by on public.gastos(created_by);
 create index if not exists idx_orders_created_at_status on public.orders(created_at, status);
 create index if not exists idx_payments_created_at_status on public.payments(created_at, status);
+create index if not exists idx_order_items_order_id on public.order_items(order_id);
+create index if not exists idx_order_items_product_id on public.order_items(product_id);
 
 create or replace function public.set_updated_at()
 returns trigger

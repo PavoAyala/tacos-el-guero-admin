@@ -321,6 +321,7 @@ export default function DashboardScreen() {
           <QuickAction title="Activos" icon="flash-outline" onPress={() => router.push('/(tabs)/activos')} />
           <QuickAction title="Inventario" icon="cube-outline" onPress={() => router.push('/(tabs)/inventario')} />
           <QuickAction title="Corte de Caja" icon="calculator-outline" onPress={() => router.push('/(tabs)/corte-caja')} />
+          <QuickAction title="Fiscal" icon="receipt-outline" onPress={() => router.push('/(tabs)/fiscal')} />
           <QuickAction title="Personal" icon="people-circle-outline" onPress={() => router.push('/(tabs)/personal')} />
         </ScrollView>
 
