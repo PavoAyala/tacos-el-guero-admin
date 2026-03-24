@@ -18,6 +18,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { exportarResumenFiscalCSV, exportarResumenFiscalPDF } from '@/lib/fiscal-export';
 import { obtenerResumenFiscalMensual, ResumenFiscalMensual } from '@/lib/fiscal';
 import { Gasto, MetodoPagoGasto, NuevoGasto, crearGasto, obtenerGastosDelMes } from '@/lib/gastos';
 
@@ -327,6 +328,7 @@ export default function FiscalScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [expenseModalVisible, setExpenseModalVisible] = useState(false);
+    const [exportingType, setExportingType] = useState<'csv' | 'pdf' | null>(null);
 
     const cardBg = useThemeColor({}, 'card');
     const borderColor = useThemeColor({}, 'border');
@@ -367,6 +369,30 @@ export default function FiscalScreen() {
         if (resumen.iva_neto < 0) return 'Saldo a favor';
         return 'IVA en balance';
     }, [resumen]);
+
+    const handleExport = async (type: 'csv' | 'pdf') => {
+        if (!resumen) return;
+        if (resumen.errores.length > 0) {
+            Alert.alert(
+                'Exportacion bloqueada',
+                'Corrige o completa los datos del periodo antes de exportar el resumen.'
+            );
+            return;
+        }
+
+        setExportingType(type);
+        try {
+            if (type === 'csv') {
+                await exportarResumenFiscalCSV({ resumen, gastos });
+            } else {
+                await exportarResumenFiscalPDF({ resumen, gastos });
+            }
+        } catch (error: any) {
+            Alert.alert('Error', error.message ?? 'No se pudo exportar el resumen.');
+        } finally {
+            setExportingType(null);
+        }
+    };
 
     return (
         <ThemedView style={styles.container}>
@@ -461,6 +487,47 @@ export default function FiscalScreen() {
 
                         <ThemedView style={[styles.sectionCard, { backgroundColor: cardBg, borderColor }]}>
                             <View style={styles.sectionHeader}>
+                                <View>
+                                    <ThemedText type="subtitle">Exportacion para Contador</ThemedText>
+                                    <ThemedText style={[styles.helperText, { color: subtext }]}>
+                                        Genera el resumen mensual en CSV o PDF
+                                    </ThemedText>
+                                </View>
+                            </View>
+                            <View style={styles.exportRow}>
+                                <TouchableOpacity
+                                    style={[styles.exportButton, styles.exportButtonCsv, exportingType && exportingType !== 'csv' && { opacity: 0.7 }]}
+                                    onPress={() => handleExport('csv')}
+                                    disabled={!!exportingType}
+                                >
+                                    {exportingType === 'csv' ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="document-text-outline" size={18} color="#fff" />
+                                            <ThemedText style={styles.exportButtonText}>Exportar CSV</ThemedText>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.exportButton, styles.exportButtonPdf, exportingType && exportingType !== 'pdf' && { opacity: 0.7 }]}
+                                    onPress={() => handleExport('pdf')}
+                                    disabled={!!exportingType}
+                                >
+                                    {exportingType === 'pdf' ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="print-outline" size={18} color="#fff" />
+                                            <ThemedText style={styles.exportButtonText}>Exportar PDF</ThemedText>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </ThemedView>
+
+                        <ThemedView style={[styles.sectionCard, { backgroundColor: cardBg, borderColor }]}>
+                            <View style={styles.sectionHeader}>
                                 <ThemedText type="subtitle">Desglose Fiscal</ThemedText>
                                 <ThemedText style={[styles.helperText, { color: subtext }]}>
                                     {resumen.total_ordenes} ventas · {resumen.total_gastos} gastos
@@ -519,7 +586,7 @@ export default function FiscalScreen() {
 
                         <ThemedView style={[styles.sectionCard, { backgroundColor: cardBg, borderColor }]}>
                             <View style={styles.sectionHeader}>
-                                <View>
+                                <View style={{ flex: 1, paddingRight: 8 }}>
                                     <ThemedText type="subtitle">Gastos del Mes</ThemedText>
                                     <ThemedText style={[styles.helperText, { color: subtext }]}>
                                         Captura de gastos para IVA acreditable y utilidad fiscal
@@ -654,6 +721,30 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     addButtonText: {
+        color: '#fff',
+        fontWeight: '700',
+    },
+    exportRow: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    exportButton: {
+        flex: 1,
+        minHeight: 48,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        gap: 8,
+        paddingHorizontal: 12,
+    },
+    exportButtonCsv: {
+        backgroundColor: '#2563eb',
+    },
+    exportButtonPdf: {
+        backgroundColor: '#dc2626',
+    },
+    exportButtonText: {
         color: '#fff',
         fontWeight: '700',
     },
