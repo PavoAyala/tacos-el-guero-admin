@@ -26,6 +26,16 @@ export async function obtenerPersonal(): Promise<Profile[]> {
             .select('*')
             .order('name', { ascending: true });
 
+        if (userError) throw userError;
+        return (userData ?? []) as Profile[];
+    }
+
+    return (data ?? []) as Profile[];
+}
+
+/**
+ * Obtiene el conteo total de clientes en la tabla profiles.
+ */
 export async function obtenerConteoClientes(): Promise<number> {
     const { count, error } = await supabase
         .from('profiles')
