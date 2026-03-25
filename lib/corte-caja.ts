@@ -85,8 +85,21 @@ export async function calcularTotalesDelDia(fecha: string): Promise<TotalesPorMe
 }
 
 /**
- * Guarda un corte de caja en Supabase.
+ * Verifica si ya existe un corte de caja guardado para la fecha dada.
  */
+export async function verificarCorteExistente(fecha: string): Promise<boolean> {
+    console.log('[verificarCorte] Consultando fecha:', fecha);
+    const { data, error } = await supabase
+        .from('cortes_caja')
+        .select('id')
+        .eq('fecha', fecha)
+        .limit(1);
+
+    console.log('[verificarCorte] data:', JSON.stringify(data), '| error:', JSON.stringify(error));
+    if (error) throw error;
+    return (data ?? []).length > 0;
+}
+
 export async function guardarCorte(datos: NuevoCorte): Promise<CorteCaja> {
     const { data: { user } } = await supabase.auth.getUser();
 
