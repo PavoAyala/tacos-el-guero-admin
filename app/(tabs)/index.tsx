@@ -17,12 +17,12 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AlertaInventario, marcarAlertaAtendida, obtenerAlertasActivas } from '@/lib/inventario';
-import { crearOrderManual, OrderType } from '@/lib/orders';
+import { crearOrderManual, obtenerPedidosPendientes, Order, OrderType } from '@/lib/orders';
+import { obtenerConteoClientes } from '@/lib/personal';
 import { supabase } from '@/lib/supabase';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { calcularTotalesDelDia, TotalesPorMetodo } from '@/lib/corte-caja';
-import { obtenerPedidosPendientes, Order } from '@/lib/orders';
 
 const formatMXN = (n: number) =>
   n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
@@ -42,6 +42,7 @@ const OrderFormModal = ({
 }) => {
   const [monto, setMonto] = useState('');
   const [tipo, setTipo] = useState<OrderType>('dine-in');
+  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'tarjeta' | 'otro'>('efectivo');
   const [guardando, setGuardando] = useState(false);
 
   const inputBg = useThemeColor({}, 'inputBackground');
@@ -53,6 +54,7 @@ const OrderFormModal = ({
     if (visible) {
       setMonto('');
       setTipo('dine-in');
+      setMetodoPago('efectivo');
     }
   }, [visible]);
 
@@ -68,6 +70,7 @@ const OrderFormModal = ({
       await crearOrderManual({
         total_amount: total,
         order_type: tipo,
+        payment_method: metodoPago,
       });
       onSave();
       onClose();
@@ -84,7 +87,7 @@ const OrderFormModal = ({
       <View style={[dashboardStyles.sheet, { backgroundColor: cardBg }]}>
         <View style={dashboardStyles.sheetHandle} />
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          <ThemedText type="subtitle" style={{ marginBottom: 20 }}>Nueva Venta (Efectivo)</ThemedText>
+          <ThemedText type="subtitle" style={{ marginBottom: 20 }}>Nueva Venta</ThemedText>
 
           <ThemedText style={dashboardStyles.label}>Monto Total *</ThemedText>
           <TextInput
@@ -95,6 +98,21 @@ const OrderFormModal = ({
             placeholderTextColor="#aaa"
             keyboardType="decimal-pad"
           />
+
+          <ThemedText style={dashboardStyles.label}>Método de Pago</ThemedText>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+            {(['efectivo', 'tarjeta', 'otro'] as const).map((m) => (
+              <TouchableOpacity
+                key={m}
+                style={[dashboardStyles.chip, metodoPago === m && dashboardStyles.chipSelected]}
+                onPress={() => setMetodoPago(m)}
+              >
+                <ThemedText style={[dashboardStyles.chipText, metodoPago === m && dashboardStyles.chipTextSelected]}>
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
+          </View>
 
           <ThemedText style={dashboardStyles.label}>Tipo de Pedido</ThemedText>
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
@@ -207,9 +225,11 @@ const QuickAction = ({ title, icon, onPress }: { title: string, icon: keyof type
 export default function DashboardScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [alertas, setAlertas] = useState<AlertaInventario[]>([]);
   const [orderModalVisible, setOrderModalVisible] = useState(false);
   const [ordenesPendientes, setOrdenesPendientes] = useState<Order[]>([]);
+  const [clientesCount, setClientesCount] = useState(0);
   const [totalesHoy, setTotalesHoy] = useState<TotalesPorMetodo>({
     efectivo: 0,
     tarjeta: 0,
@@ -219,16 +239,21 @@ export default function DashboardScreen() {
 
   const cargarDatos = useCallback(async () => {
     try {
-      const [alertasData, totalesData, pedidosData] = await Promise.all([
+      const [alertasData, totalesData, pedidosData, clientesData] = await Promise.all([
         obtenerAlertasActivas(),
         calcularTotalesDelDia(todayISO()),
-        obtenerPedidosPendientes()
+        obtenerPedidosPendientes(),
+        obtenerConteoClientes(),
       ]);
       setAlertas(alertasData);
       setTotalesHoy(totalesData);
       setOrdenesPendientes(pedidosData);
-    } catch {
-      // silencioso en dashboard
+      setClientesCount(clientesData);
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert('Error', error?.message ?? 'No se pudieron cargar los indicadores del inicio.');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -279,25 +304,30 @@ export default function DashboardScreen() {
         contentContainerStyle={dashboardStyles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-
         {/* Sección de Resumen del Día */}
         <ThemedText type="subtitle" style={dashboardStyles.sectionTitle}>Resumen del Día</ThemedText>
-        <View style={dashboardStyles.statsGrid}>
-          <StatCard
-            title="Ventas Totales"
-            value={formatMXN(totalesHoy.total)}
-            icon="cash-outline"
-            color="#10b981"
-          />
-          <StatCard title="Pedidos Activos" value={ordenesPendientes.length.toString()} icon="restaurant-outline" color="#f59e0b" />
-          <StatCard title="Clientes" value="142" icon="people-outline" color="#3b82f6" />
-          <StatCard
-            title="Inventario Bajo"
-            value={alertas.length > 0 ? `${alertas.length} items` : '✓ OK'}
-            icon="alert-outline"
-            color={alertas.length > 0 ? '#ef4444' : '#10b981'}
-          />
-        </View>
+        {loading ? (
+          <View style={dashboardStyles.statsLoading}>
+            <ActivityIndicator size="large" color="#10b981" />
+          </View>
+        ) : (
+          <View style={dashboardStyles.statsGrid}>
+            <StatCard
+              title="Ventas Totales"
+              value={formatMXN(totalesHoy.total)}
+              icon="cash-outline"
+              color="#10b981"
+            />
+            <StatCard title="Pedidos Activos" value={ordenesPendientes.length.toString()} icon="restaurant-outline" color="#f59e0b" />
+            <StatCard title="Clientes" value={clientesCount.toString()} icon="people-outline" color="#3b82f6" />
+            <StatCard
+              title="Inventario Bajo"
+              value={alertas.length > 0 ? `${alertas.length} items` : '✓ OK'}
+              icon="alert-outline"
+              color={alertas.length > 0 ? '#ef4444' : '#10b981'}
+            />
+          </View>
+        )}
 
         {/* Sección de Alertas / Pendientes */}
         <ThemedText type="subtitle" style={dashboardStyles.sectionTitle}>Atención Requerida</ThemedText>
@@ -380,6 +410,11 @@ const dashboardStyles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 10,
+  },
+  statsLoading: {
+    minHeight: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   card: {
     width: '45%', // Aproximadamente la mitad menos márgenes

@@ -34,16 +34,21 @@ export interface NuevoCorte {
  * Calcula totales del día agrupados por método de pago
  * usando la tabla `payments` de Supabase.
  */
+// Todos los pagos del día cuentan como venta (pending = en proceso, completed = confirmado)
+const STATUS_COMPLETADOS = ['completed', 'pending'];
+
 export async function calcularTotalesDelDia(fecha: string): Promise<TotalesPorMetodo> {
     // La fecha viene como YYYY-MM-DD (local)
-    // Definimos el rango del día completo en la zona horaria local
-    const inicio = new Date(`${fecha}T00:00:00`).toISOString();
-    const fin = new Date(`${fecha}T23:59:59.999`).toISOString();
+    // Usamos strings de fecha LOCAL directamente para no desplazar el día al convertir a UTC.
+    // Esto funciona correctamente con columnas timestamp WITH time zone (después del fix SQL)
+    // y también con timestamp WITHOUT time zone (antes del fix).
+    const inicio = `${fecha}T00:00:00`;
+    const fin   = `${fecha}T23:59:59.999`;
 
     const { data, error } = await supabase
         .from('payments')
-        .select('payment_method, amount')
-        .eq('status', 'completed')
+        .select('payment_method, amount, status')
+        .in('status', STATUS_COMPLETADOS)
         .gte('created_at', inicio)
         .lte('created_at', fin);
 

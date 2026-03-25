@@ -27,6 +27,7 @@ export interface Order {
 export interface NewOrder {
     total_amount: number;
     order_type: OrderType;
+    payment_method: 'efectivo' | 'tarjeta';
 }
 
 /**
@@ -58,7 +59,7 @@ export async function crearOrderManual(datos: NewOrder): Promise<Order> {
         .insert({
             order_id: order.id,
             amount: datos.total_amount,
-            payment_method: 'efectivo',
+            payment_method: datos.payment_method,
             status: 'completed',
         });
 

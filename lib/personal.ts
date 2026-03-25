@@ -33,3 +33,16 @@ export async function obtenerPersonal(): Promise<Profile[]> {
         }))
         .sort((a, b) => a.display_name!.localeCompare(b.display_name!, 'es', { sensitivity: 'base' }));
 }
+
+export async function obtenerConteoClientes(): Promise<number> {
+    const { count, error } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true });
+
+    if (error) {
+        console.error('Error al contar clientes desde profiles:', error.message);
+        throw error;
+    }
+
+    return count ?? 0;
+}
