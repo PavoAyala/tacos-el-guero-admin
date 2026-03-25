@@ -2,10 +2,10 @@ import { supabase } from './supabase';
 
 export interface Profile {
     id: string;
-    email?: string;
+    email?: string | null;
     display_name: string | null;
     avatar_url: string | null;
-    role: 'admin' | 'staff' | 'manager' | null;
+    role: 'cliente' | 'cocina' | 'cajero' | 'admin' | 'mesero' | 'dueño' | null;
     created_at: string;
 }
 
@@ -15,27 +15,21 @@ export interface Profile {
 export async function obtenerPersonal(): Promise<Profile[]> {
     const { data, error } = await supabase
         .from('profiles')
-        .select('*')
-        .order('name', { ascending: true });
+        .select('id, name, role, created_at');
 
-    if (error || !data || data.length === 0) {
-        if (error) console.error('Error al obtener personal de profiles:', error);
-        // Si la tabla profiles no existe o falla o está vacía, intentamos con 'users' como fallback
-        const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('*')
-            .order('name', { ascending: true });
-
-        if (userError) throw userError;
-        
-        return (userData ?? []).map((u: any) => ({
-            ...u,
-            display_name: u.display_name || u.name || null
-        })) as Profile[];
+    if (error) {
+        console.error('Error al obtener personal de profiles:', error.message);
+        throw error;
     }
 
-    return (data ?? []).map((p: any) => ({
-        ...p,
-        display_name: p.display_name || p.name || null
-    })) as Profile[];
+    return (data ?? [])
+        .map((p: any) => ({
+            id: p.id,
+            email: null,
+            avatar_url: null,
+            role: p.role ?? null,
+            created_at: p.created_at,
+            display_name: p.display_name ?? p.name ?? p.email ?? 'Sin nombre',
+        }))
+        .sort((a, b) => a.display_name!.localeCompare(b.display_name!, 'es', { sensitivity: 'base' }));
 }

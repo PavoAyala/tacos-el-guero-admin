@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     RefreshControl,
     StyleSheet,
@@ -26,8 +27,11 @@ const PersonnelCard = ({ person }: { person: Profile }) => {
     const getRoleLabel = (role: string | null) => {
         switch (role) {
             case 'admin': return 'Administrador';
-            case 'manager': return 'Gerente';
-            case 'staff': return 'Personal';
+            case 'dueño': return 'Dueño';
+            case 'cajero': return 'Cajero';
+            case 'cocina': return 'Cocina';
+            case 'mesero': return 'Mesero';
+            case 'cliente': return 'Cliente';
             default: return 'Usuario';
         }
     };
@@ -35,8 +39,11 @@ const PersonnelCard = ({ person }: { person: Profile }) => {
     const getRoleColor = (role: string | null) => {
         switch (role) {
             case 'admin': return '#ef4444';
-            case 'manager': return '#3b82f6';
-            case 'staff': return '#10b981';
+            case 'dueño': return '#8b5cf6';
+            case 'cajero': return '#3b82f6';
+            case 'cocina': return '#f59e0b';
+            case 'mesero': return '#10b981';
+            case 'cliente': return '#6b7280';
             default: return '#6b7280';
         }
     };
@@ -71,17 +78,22 @@ export default function PersonalScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     const inputBg = useThemeColor({}, 'inputBackground');
     const textColor = useThemeColor({}, 'text');
 
     const cargarPersonal = useCallback(async () => {
         try {
+            setLoadError(null);
             const data = await obtenerPersonal();
             setPersonal(data);
             setFilteredPersonal(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
+            const message = error?.message ?? 'No se pudo cargar el personal.';
+            setLoadError(message);
+            Alert.alert('Error al cargar personal', message);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -158,8 +170,17 @@ export default function PersonalScreen() {
                         <View style={styles.emptyState}>
                             <Ionicons name="people-outline" size={64} color="#ccc" />
                             <ThemedText style={styles.emptyText}>
-                                {search.length > 0 ? 'No se encontraron resultados' : 'No hay personal registrado'}
+                                {loadError
+                                    ? 'No fue posible consultar la tabla profiles'
+                                    : search.length > 0
+                                        ? 'No se encontraron resultados'
+                                        : 'No hay personal registrado'}
                             </ThemedText>
+                            {loadError ? (
+                                <ThemedText style={styles.emptySubtext}>
+                                    Verifica que la política RLS de `profiles` permita a admin o dueño ver a todo el personal.
+                                </ThemedText>
+                            ) : null}
                         </View>
                     }
                 />
@@ -249,5 +270,12 @@ const styles = StyleSheet.create({
     emptyText: {
         color: '#888',
         fontSize: 16,
+        textAlign: 'center',
+    },
+    emptySubtext: {
+        color: '#888',
+        fontSize: 13,
+        textAlign: 'center',
+        paddingHorizontal: 24,
     },
 });
