@@ -18,9 +18,9 @@ export async function obtenerPersonal(): Promise<Profile[]> {
         .select('*')
         .order('name', { ascending: true });
 
-    if (error) {
-        console.error('Error al obtener personal:', error);
-        // Si la tabla profiles no existe o falla, intentamos con 'users' como fallback
+    if (error || !data || data.length === 0) {
+        if (error) console.error('Error al obtener personal de profiles:', error);
+        // Si la tabla profiles no existe o falla o está vacía, intentamos con 'users' como fallback
         const { data: userData, error: userError } = await supabase
             .from('users')
             .select('*')
