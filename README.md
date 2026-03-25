@@ -1,50 +1,51 @@
-# Welcome to your Expo app 👋
+# Tacos El Guero - Panel de Administrador
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Este repositorio contiene el código fuente del panel de administración para **Tacos El Guero**.
+Sitio web principal: [https://tacoselguero.mx](https://tacoselguero.mx)
 
-## Get started
+## 🌮 Acerca del Proyecto
 
-1. Install dependencies
+Este es un panel de administración diseñado para gestionar las operaciones de Tacos El Guero. Permite a los administradores controlar diversos aspectos del negocio desde una interfaz centralizada.
 
-   ```bash
-   npm install
-   ```
+## 🚀 Comenzando
 
-2. Start the app
+Este proyecto está construido con [Expo](https://expo.dev). Sigue estos pasos para ejecutarlo localmente:
 
-   ```bash
-   npx expo start
-   ```
+### 1. Prerrequisitos
 
-In the output, you'll find options to open the app in a
+Asegúrate de tener instalado Node.js y npm en tu sistema.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 2. Instalación
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Clona el repositorio e instala las dependencias:
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 3. Ejecución
 
-## Learn more
+Para iniciar el servidor de desarrollo:
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+npx expo start
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Esto te permitirá abrir la aplicación en:
+- **Expo Go** (Android/iOS) escaneando el código QR.
+- **Emulador de Android** o **Simulador de iOS**.
+- **Versión Web** (si está habilitada) presionando `w`.
 
-## Join the community
+## 📂 Estructura del Proyecto
 
-Join our community of developers creating universal apps.
+- **app/**: Contiene las pantallas y la lógica de navegación (File-based routing).
+- **components/**: Componentes reutilizables de la interfaz.
+- **assets/**: Imágenes, fuentes y otros recursos estáticos.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 🔗 Enlaces Importantes
+
+- [Documentación de Expo](https://docs.expo.dev/)
+- [Sitio Web de Tacos El Guero](https://tacoselguero.mx)
+
+---
+*Si tienes alguna duda sobre el funcionamiento o necesitas más detalles, no dudes en consultar.*
