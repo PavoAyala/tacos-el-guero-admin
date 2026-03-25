@@ -16,7 +16,7 @@ export async function obtenerPersonal(): Promise<Profile[]> {
     const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .order('display_name', { ascending: true });
+        .order('name', { ascending: true });
 
     if (error) {
         console.error('Error al obtener personal:', error);
@@ -24,11 +24,18 @@ export async function obtenerPersonal(): Promise<Profile[]> {
         const { data: userData, error: userError } = await supabase
             .from('users')
             .select('*')
-            .order('display_name', { ascending: true });
+            .order('name', { ascending: true });
 
         if (userError) throw userError;
-        return (userData ?? []) as Profile[];
+        
+        return (userData ?? []).map((u: any) => ({
+            ...u,
+            display_name: u.display_name || u.name || null
+        })) as Profile[];
     }
 
-    return (data ?? []) as Profile[];
+    return (data ?? []).map((p: any) => ({
+        ...p,
+        display_name: p.display_name || p.name || null
+    })) as Profile[];
 }
