@@ -38,13 +38,13 @@ const PersonnelCard = ({ person }: { person: Profile }) => {
 
     const getRoleColor = (role: string | null) => {
         switch (role) {
-            case 'admin': return '#ef4444';
-            case 'dueño': return '#8b5cf6';
-            case 'cajero': return '#3b82f6';
-            case 'cocina': return '#f59e0b';
-            case 'mesero': return '#10b981';
-            case 'cliente': return '#6b7280';
-            default: return '#6b7280';
+            case 'admin': return '#ef4444';     // red
+            case 'dueño': return '#7c3aed';     // purple
+            case 'cajero': return '#f59e0b';    // amber
+            case 'cocina': return '#10b981';    // emerald
+            case 'mesero': return '#3b82f6';    // blue
+            case 'cliente': return '#6b7280';   // gray
+            default: return '#9ca3af';
         }
     };
 
@@ -55,7 +55,7 @@ const PersonnelCard = ({ person }: { person: Profile }) => {
             </View>
             <View style={styles.info}>
                 <ThemedText type="defaultSemiBold" style={styles.name}>
-                    {person.display_name || 'Sin nombre'}
+                    {person.name || 'Sin nombre'}
                 </ThemedText>
                 <ThemedText style={[styles.role, { color: getRoleColor(person.role) }]}>
                     {getRoleLabel(person.role)}
@@ -112,7 +112,7 @@ export default function PersonalScreen() {
             setFilteredPersonal(
                 personal.filter(
                     (p) =>
-                        p.display_name?.toLowerCase().includes(lowerSearch) ||
+                        p.name?.toLowerCase().includes(lowerSearch) ||
                         p.email?.toLowerCase().includes(lowerSearch)
                 )
             );
