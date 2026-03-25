@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     RefreshControl,
     StyleSheet,
@@ -77,17 +78,22 @@ export default function PersonalScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     const inputBg = useThemeColor({}, 'inputBackground');
     const textColor = useThemeColor({}, 'text');
 
     const cargarPersonal = useCallback(async () => {
         try {
+            setLoadError(null);
             const data = await obtenerPersonal();
             setPersonal(data);
             setFilteredPersonal(data);
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
+            const message = error?.message ?? 'No se pudo cargar el personal.';
+            setLoadError(message);
+            Alert.alert('Error al cargar personal', message);
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -164,8 +170,17 @@ export default function PersonalScreen() {
                         <View style={styles.emptyState}>
                             <Ionicons name="people-outline" size={64} color="#ccc" />
                             <ThemedText style={styles.emptyText}>
-                                {search.length > 0 ? 'No se encontraron resultados' : 'No hay personal registrado'}
+                                {loadError
+                                    ? 'No fue posible consultar la tabla profiles'
+                                    : search.length > 0
+                                        ? 'No se encontraron resultados'
+                                        : 'No hay personal registrado'}
                             </ThemedText>
+                            {loadError ? (
+                                <ThemedText style={styles.emptySubtext}>
+                                    Verifica que la política RLS de `profiles` permita a admin o dueño ver a todo el personal.
+                                </ThemedText>
+                            ) : null}
                         </View>
                     }
                 />
@@ -255,5 +270,12 @@ const styles = StyleSheet.create({
     emptyText: {
         color: '#888',
         fontSize: 16,
+        textAlign: 'center',
+    },
+    emptySubtext: {
+        color: '#888',
+        fontSize: 13,
+        textAlign: 'center',
+        paddingHorizontal: 24,
     },
 });

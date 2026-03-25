@@ -26,9 +26,15 @@ export async function obtenerPersonal(): Promise<Profile[]> {
             .select('*')
             .order('name', { ascending: true });
 
-        if (userError) throw userError;
-        return (userData ?? []) as Profile[];
+export async function obtenerConteoClientes(): Promise<number> {
+    const { count, error } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true });
+
+    if (error) {
+        console.error('Error al contar clientes desde profiles:', error.message);
+        throw error;
     }
 
-    return (data ?? []) as Profile[];
+    return count ?? 0;
 }

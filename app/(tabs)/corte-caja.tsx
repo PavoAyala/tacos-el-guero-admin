@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -21,6 +21,7 @@ import {
     TotalesPorMetodo,
     calcularTotalesDelDia,
     guardarCorte,
+    verificarCorteExistente,
 } from '@/lib/corte-caja';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -105,7 +106,7 @@ export default function CorteCajaScreen() {
     const borderCol = useThemeColor({}, 'border');
     const cardBg = useThemeColor({}, 'card');
 
-    const cargarDatos = async () => {
+    const cargarDatos = useCallback(async () => {
         try {
             const data = await calcularTotalesDelDia(fecha);
             setTotales(data);
@@ -116,12 +117,12 @@ export default function CorteCajaScreen() {
             setCargando(false);
             setRefreshing(false);
         }
-    };
+    }, [fecha]);
 
     // Cargar totales al montar
     useEffect(() => {
-        cargarDatos();
-    }, [fecha]);
+        void cargarDatos();
+    }, [cargarDatos]);
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -133,10 +134,45 @@ export default function CorteCajaScreen() {
 
     const handleGuardar = async () => {
         if (!efectivoContado) {
-            Alert.alert('Efectivo requerido', 'Ingresa el efectivo contado antes de guardar.');
+            Alert.alert(
+                '⚠️ Dato requerido',
+                'Ingresa el efectivo contado antes de guardar el corte.'
+            );
             return;
         }
 
+        // Verificar si ya existe un corte hoy antes de guardar
+        try {
+            const yaExiste = await verificarCorteExistente(fecha);
+            if (yaExiste) {
+                Alert.alert(
+                    '📅 Corte ya registrado',
+                    `Ya existe un corte de caja guardado para hoy (${new Date().toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}).
+
+¿Deseas guardar otro corte de todas formas?`,
+                    [
+                        {
+                            text: 'Cancelar',
+                            style: 'cancel',
+                        },
+                        {
+                            text: 'Guardar de todas formas',
+                            style: 'destructive',
+                            onPress: () => void ejecutarGuardado(),
+                        },
+                    ]
+                );
+                return;
+            }
+        } catch (e) {
+            console.warn('[verificarCorteExistente] Error:', e);
+            // Si falla la verificación, dejamos continuar
+        }
+
+        await ejecutarGuardado();
+    };
+
+    const ejecutarGuardado = async () => {
         setGuardando(true);
         try {
             await guardarCorte({
@@ -149,11 +185,19 @@ export default function CorteCajaScreen() {
                 notas: notas.trim() || undefined,
             });
 
+            const hayDiferencia = diferencia < -5;
             Alert.alert(
-                '¡Corte guardado!',
-                diferencia < 0
-                    ? `⚠️ Diferencia detectada: ${formatMXN(diferencia)}`
-                    : `✅ Corte sin diferencias.`,
+                hayDiferencia ? '⚠️ Corte guardado con diferencia' : '✅ Corte guardado',
+                [
+                    `📅 Fecha: ${new Date().toLocaleDateString('es-MX')}`,
+                    `💵 Efectivo sistema: ${formatMXN(totales.efectivo)}`,
+                    `💳 Tarjeta sistema: ${formatMXN(totales.tarjeta)}`,
+                    `🧮 Total sistema: ${formatMXN(totales.total)}`,
+                    `💰 Efectivo contado: ${formatMXN(efectivoContadoNum)}`,
+                    hayDiferencia
+                        ? `🔴 Faltante: ${formatMXN(diferencia)}`
+                        : `🟢 Sin diferencias`,
+                ].join('\n'),
                 [
                     {
                         text: 'Ver historial',
@@ -163,8 +207,16 @@ export default function CorteCajaScreen() {
                 ]
             );
         } catch (e: unknown) {
-            Alert.alert('Error', 'No se pudo guardar el corte. Intenta de nuevo.');
-            console.error(e);
+            const mensaje =
+                e instanceof Error
+                    ? e.message
+                    : 'Error desconocido. Revisa tu conexión e intenta de nuevo.';
+            Alert.alert(
+                '❌ No se pudo guardar el corte',
+                mensaje,
+                [{ text: 'Entendido' }]
+            );
+            console.error('[guardarCorte]', e);
         } finally {
             setGuardando(false);
         }

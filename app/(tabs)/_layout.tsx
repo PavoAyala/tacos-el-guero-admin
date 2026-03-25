@@ -20,6 +20,18 @@ const IconCorteCaja = ({ color }: { color: string }) => (
   <Ionicons size={26} name="calculator-outline" color={color} />
 );
 
+const IconFiscal = ({ color }: { color: string }) => (
+  <Ionicons size={26} name="receipt-outline" color={color} />
+);
+
+const IconPersonal = ({ color }: { color: string }) => (
+  <Ionicons size={26} name="people-outline" color={color} />
+);
+
+const IconActivos = ({ color }: { color: string }) => (
+  <Ionicons size={26} name="flash-outline" color={color} />
+);
+
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
@@ -49,6 +61,27 @@ export default function TabLayout() {
         options={{
           title: 'Corte de Caja',
           tabBarIcon: IconCorteCaja,
+        }}
+      />
+      <Tabs.Screen
+        name="fiscal"
+        options={{
+          title: 'Fiscal',
+          tabBarIcon: IconFiscal,
+        }}
+      />
+      <Tabs.Screen
+        name="personal"
+        options={{
+          title: 'Personal',
+          tabBarIcon: IconPersonal,
+        }}
+      />
+      <Tabs.Screen
+        name="activos"
+        options={{
+          title: 'Activos',
+          tabBarIcon: IconActivos,
         }}
       />
     </Tabs>
