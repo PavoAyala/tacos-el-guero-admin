@@ -138,10 +138,15 @@ export default function ActivosScreen() {
         <ThemedView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={textColor} />
+                <View style={styles.headerLeft}>
+                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={24} color={textColor} />
+                    </TouchableOpacity>
+                    <ThemedText type="title">Pedidos Activos</ThemedText>
+                </View>
+                <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh} disabled={loading || refreshing}>
+                    <Ionicons name="refresh-outline" size={24} color={textColor} />
                 </TouchableOpacity>
-                <ThemedText type="title">Pedidos Activos</ThemedText>
             </View>
 
             {loading ? (
@@ -179,9 +184,17 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 20,
         marginBottom: 20,
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: 15,
+    },
+    refreshBtn: {
+        padding: 5,
     },
     backButton: {
         padding: 5,

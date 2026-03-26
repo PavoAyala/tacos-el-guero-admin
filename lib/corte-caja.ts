@@ -130,3 +130,15 @@ export async function obtenerHistorialCortes(limit = 30): Promise<CorteCaja[]> {
     if (error) throw error;
     return (data ?? []) as CorteCaja[];
 }
+
+/**
+ * Elimina un corte de caja por su id.
+ */
+export async function eliminarCorteCaja(id: string): Promise<void> {
+    const { error } = await supabase
+        .from('cortes_caja')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw error;
+}

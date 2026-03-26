@@ -13,7 +13,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { type CorteCaja, obtenerHistorialCortes } from '@/lib/corte-caja';
+import { type CorteCaja, obtenerHistorialCortes, eliminarCorteCaja } from '@/lib/corte-caja';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,9 +32,10 @@ const formatFecha = (fechaISO: string) =>
 
 interface CorteCardProps {
     corte: CorteCaja;
+    onDelete?: (id: string) => void;
 }
 
-const CorteCard = ({ corte }: CorteCardProps) => {
+const CorteCard = ({ corte, onDelete }: CorteCardProps) => {
     const diferencia = corte.diferencia ?? corte.efectivo_contado - corte.efectivo_sistema;
     const esFuga = diferencia < 0;
     const esSinDif = Math.abs(diferencia) < 0.01;
@@ -66,9 +67,16 @@ const CorteCard = ({ corte }: CorteCardProps) => {
                     <ThemedText style={styles.corteTotal}>{formatMXN(corte.total_sistema)}</ThemedText>
                     <ThemedText style={styles.corteTotalLabel}>en ventas totales</ThemedText>
                 </View>
-                <View style={[styles.estadoBadge, { backgroundColor: estadoColor + '20' }]}>
-                    <Ionicons name={estadoIcon} size={16} color={estadoColor} />
-                    <ThemedText style={[styles.estadoText, { color: estadoColor }]}>{estadoLabel}</ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={[styles.estadoBadge, { backgroundColor: estadoColor + '20' }]}>
+                        <Ionicons name={estadoIcon} size={16} color={estadoColor} />
+                        <ThemedText style={[styles.estadoText, { color: estadoColor }]}>{estadoLabel}</ThemedText>
+                    </View>
+                    {onDelete && (
+                        <TouchableOpacity onPress={() => onDelete(corte.id)} style={{ marginLeft: 10, padding: 4 }}>
+                            <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
 
@@ -152,6 +160,31 @@ export default function HistorialCortesScreen() {
         cargar();
     }, [cargar]);
 
+    const handleEliminar = useCallback((id: string) => {
+        Alert.alert(
+            'Eliminar Corte',
+            '¿Estás seguro de que deseas eliminar este corte de caja? Esta acción no se puede deshacer.',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Eliminar',
+                    style: 'destructive',
+                    onPress: () => {
+                        void (async () => {
+                            try {
+                                await eliminarCorteCaja(id);
+                                cargar();
+                            } catch (e) {
+                                Alert.alert('Error', 'No se pudo eliminar el corte de caja.');
+                                console.error('Error al eliminar corte:', e);
+                            }
+                        })();
+                    },
+                },
+            ]
+        );
+    }, [cargar]);
+
     return (
         <ThemedView style={styles.container}>
             {/* Header */}
@@ -185,7 +218,7 @@ export default function HistorialCortesScreen() {
                                 {cortes.length === 1 ? '' : 's'}
                             </ThemedText>
                             {cortes.map((c) => (
-                                <CorteCard key={c.id} corte={c} />
+                                <CorteCard key={c.id} corte={c} onDelete={handleEliminar} />
                             ))}
                         </>
                     ) : (
